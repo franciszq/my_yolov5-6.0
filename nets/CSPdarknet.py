@@ -67,6 +67,23 @@ class C3(nn.Module):
             )
         , dim=1))
 
+
+class SPPF(nn.Module):
+    def __init__(self, c1, c2, k=5):
+        super().__init__()
+        c_ = c1 // 2
+        self.cv1 = Conv(c1, c_, 1, 1)
+        self.cv2 = Conv(c_ * 4, c2, 1, 1)
+        self.m = nn.MaxPool2d(kernel_size=k, stride=1, padding=k // 2)
+    
+    def forward(self, x):
+        x = self.cv1(x)
+        y1 = self.m(x)
+        y2 = self.m(y1)
+        return self.cv2(torch.cat((x, y1, y2, self.m(y2)), 1))
+
+
+
 class CSPDarknet(nn.Module):
     def __init__(self, base_channel, base_depth):
         super().__init__()
@@ -90,7 +107,7 @@ class CSPDarknet(nn.Module):
 
         self.dar5 = nn.Sequential(
             Conv(base_channel * 8, base_channel * 16, 3, 2),
-            C3(base_channel * 16, base_channel * 16, base_depth * 1),
+            C3(base_channel * 16, base_channel * 16, base_depth * 1), 
             SPPF(base_channel * 16, base_channel * 16)
         )
 
